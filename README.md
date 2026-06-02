@@ -16,19 +16,18 @@
 
 ## 🌟 What is ServiRD?
 
-ServiRD is a marketplace that connects Dominican homeowners with verified local service providers — plumbers, electricians, A/C technicians, contractors, and more.
+ServiRD es un marketplace que conecta propietarios dominicanos con proveedores locales de servicios verificados: plomeros, electricistas, técnicos de aire acondicionado, contratistas y más.
 
-No more asking around on WhatsApp. Post a job, get quotes, read reviews, and book — all in one place.
-
+No más estar preguntando por WhatsApp. Publica un trabajo, recibe cotizaciones, lee reseñas y reserva, todo en un solo lugar.
 ---
 
-## ✨ Features
+## ✨ Funcionalidades
 
-- 📋 **Job posting** — describe your problem, set your location, get quotes fast
-- 👷 **Verified providers** — identity-checked profiles with real reviews
-- 💬 **Quote system** — providers compete for your job transparently
-- ⭐ **Reviews** — build trust on both sides of every transaction
-- 📲 **Platform notifications** — providers get alerted the moment a nearby job is posted
+- 📋 **Publicación de trabajos** — describe tu problema, indica tu ubicación y recibe cotizaciones rápidamente
+- 👷 **Proveedores verificados** — perfiles con identidad verificada y reseñas reales
+- 💬 **Sistema de cotizaciones** — los proveedores compiten por tu trabajo de forma transparente
+- ⭐ **Reseñas** — genera confianza en ambas partes de cada transacción
+- 📲 **Notificaciones de la plataforma** — los proveedores reciben alertas al momento en que se publica un trabajo cercano
 
 ---
 
@@ -36,11 +35,11 @@ No more asking around on WhatsApp. Post a job, get quotes, read reviews, and boo
 
 | Phase | Status | Description |
 |-------|--------|-------------|
-| 1 — Landing page | 🚧 In progress | Homepage, provider sign-up form |
-| 2 — Database | ⏳ Upcoming | Store providers and job postings |
-| 3 — Job flow | ⏳ Upcoming | Post jobs, receive quotes, book |
-| 4 — Payments | ⏳ Upcoming | Lead fees, premium listings |
-| 5 — Launch | ⏳ Upcoming | Santo Domingo pilot, first 30 providers |
+| 1 — Página de inicio | 🚧 En progreso | Página principal, formulario de registro para proveedores |
+| 2 — Base de datos | ⏳ Próximamente | Almacenar proveedores y publicaciones de trabajos |
+| 3 — Flujo de trabajos | ⏳ Próximamente | Publicar trabajos, recibir cotizaciones y reservar |
+| 4 — Pagos | ⏳ Próximamente | Tarifas por prospectos, listados premium |
+| 5 — Lanzamiento | ⏳ Próximamente | Piloto en Santo Domingo, primeros 30 proveedores |
 
 ---
 
@@ -67,6 +66,6 @@ cd servird
 
 <div align="center">
 
-Built with ❤️ in Santo Domingo, República Dominicana 🇩🇴
+Creado con ❤️ en Santo Domingo, República Dominicana 🇩🇴
 
 </div>

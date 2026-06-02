@@ -14,7 +14,7 @@
 
 ---
 
-## 🌟 What is ServiRD?
+## 🌟 Que es ServiRD?
 
 ServiRD es un marketplace que conecta propietarios dominicanos con proveedores locales de servicios verificados: plomeros, electricistas, técnicos de aire acondicionado, contratistas y más.
 

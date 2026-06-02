@@ -4,7 +4,7 @@
 
 **La plataforma para encontrar proveedores de servicios del hogar verificados en República Dominicana.**
 
-*Connecting Dominican homeowners with trusted plumbers, electricians, A/C technicians, and more.*
+*Conectando propietarios dominicanos con plomeros, electricistas, técnicos de aire acondicionado y más.*
 
 ---
 

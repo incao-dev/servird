@@ -279,7 +279,22 @@
 
           <div class="form-group">
             <label>Correo electrónico</label>
-            <input type="email" id="email" placeholder="juan@ejemplo.com" />
+            <input
+              type="email"
+              id="email"
+              placeholder="juan@ejemplo.com"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Contraseña <span>*</span></label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Mínimo 6 caracteres"
+              required
+            />
           </div>
 
           <hr class="divider" />
@@ -340,6 +355,9 @@
     </div>
 
     <script>
+      const SUPABASE_URL = "https://yecsryoawlfxqzicoiyf.supabase.co";
+      const SUPABASE_KEY = "sb_publishable_WKqk73nGCjPh40zGGDMDTA_UFkMhYoP";
+
       document
         .getElementById("providerForm")
         .addEventListener("submit", async function (e) {
@@ -351,34 +369,68 @@
           btn.textContent = "Enviando...";
           errorMsg.style.display = "none";
 
-          const provider = {
-            first_name: document.getElementById("firstName").value,
-            last_name: document.getElementById("lastName").value,
-            phone: document.getElementById("phone").value,
-            email: document.getElementById("email").value,
-            category: document.getElementById("category").value,
-            zone: document.getElementById("zone").value,
-            bio: document.getElementById("bio").value,
-          };
+          const firstName = document.getElementById("firstName").value;
+          const lastName = document.getElementById("lastName").value;
+          const phone = document.getElementById("phone").value;
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+          const category = document.getElementById("category").value;
+          const zone = document.getElementById("zone").value;
+          const bio = document.getElementById("bio").value;
 
-          const SUPABASE_URL = "https://yecsryoawlfxqzicoiyf.supabase.co";
-          const SUPABASE_KEY = "sb_publishable_WKqk73nGCjPh40zGGDMDTA_UFkMhYoP";
-
-          const response = await fetch(`${SUPABASE_URL}/rest/v1/providers`, {
+          // Step 1 — create auth account
+          const authResponse = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               apikey: SUPABASE_KEY,
-              Authorization: `Bearer ${SUPABASE_KEY}`,
-              Prefer: "return=minimal",
             },
-            body: JSON.stringify(provider),
+            body: JSON.stringify({ email, password }),
           });
 
-          if (response.ok) {
+          const authData = await authResponse.json();
+
+          if (!authResponse.ok) {
+            errorMsg.textContent =
+              authData.msg || "Error al crear la cuenta. Intenta de nuevo.";
+            errorMsg.style.display = "block";
+            btn.disabled = false;
+            btn.textContent = "Registrarme como proveedor";
+            return;
+          }
+
+          const userId = authData.user.id;
+
+          // Step 2 — save provider profile linked to auth account
+          const profileResponse = await fetch(
+            `${SUPABASE_URL}/rest/v1/providers`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                Prefer: "return=minimal",
+              },
+              body: JSON.stringify({
+                first_name: firstName,
+                last_name: lastName,
+                phone,
+                email,
+                category,
+                zone,
+                bio,
+                user_id: userId,
+              }),
+            },
+          );
+
+          if (profileResponse.ok) {
             document.getElementById("providerForm").style.display = "none";
             document.getElementById("successBox").style.display = "block";
           } else {
+            errorMsg.textContent =
+              "Error al guardar tu perfil. Intenta de nuevo.";
             errorMsg.style.display = "block";
             btn.disabled = false;
             btn.textContent = "Registrarme como proveedor";

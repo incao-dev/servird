@@ -268,9 +268,9 @@
             <div class="stat-label">Trabajos nuevos</div>
             <div class="stat-number" id="newJobsCount">0</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-label">Cotizaciones enviadas</div>
-            <div class="stat-number">0</div>
+          <div class="stat-card highlight">
+            <div class="stat-label">Créditos disponibles</div>
+            <div class="stat-number" id="creditsCount">0</div>
           </div>
           <div class="stat-card">
             <div class="stat-label">Trabajos completados</div>
@@ -342,6 +342,8 @@
 
           document.getElementById("firstName").textContent =
             provider.first_name;
+          document.getElementById("creditsCount").textContent =
+            provider.credits;
 
           const welcome = document.querySelector(".welcome p");
           welcome.innerHTML = `
@@ -349,7 +351,12 @@
       Zona: <strong>${formatZone(provider.zone)}</strong>
     `;
 
-          loadJobs(provider.category, provider.zone);
+          loadJobs(
+            provider.category,
+            provider.zone,
+            provider.credits,
+            provider.id,
+          );
         }
       }
 
@@ -378,7 +385,7 @@
         };
         return map[zone] || zone;
       }
-      async function loadJobs(category, zone) {
+      async function loadJobs(category, zone, credits, providerId) {
         const response = await fetch(
           `${SUPABASE_URL}/rest/v1/jobs?category=eq.${category}&zone=eq.${zone}&status=eq.open&select=*&order=created_at.desc`,
           {
@@ -419,24 +426,71 @@
         <div class="job-meta">
           <span class="job-tag">📍 ${formatZone(job.zone)}</span>
           <span class="job-tag">🔧 ${formatCategory(job.category)}</span>
-          <span class="job-tag">📞 ${job.contact_phone}</span>
         </div>
       </div>
-      <button class="btn-quote" onclick="contactClient('${job.contact_phone}', '${job.title}')">
-        Cotizar
-      </button>
+      ${
+        credits > 0
+          ? `<button class="btn-quote" onclick="useCredit('${job.id}', '${job.contact_phone}', '${job.title}', '${providerId}')">
+            Cotizar (1 crédito)
+           </button>`
+          : `<button class="btn-quote" style="background:#cccccc; color:#888; cursor:not-allowed;" disabled>
+            Sin créditos
+           </button>`
+      }
     </div>
   `,
           )
           .join("");
       }
 
-      function contactClient(phone, jobTitle) {
-        const message = `Hola, vi tu trabajo en ServiRD: "${jobTitle}". Me gustaría enviarte una cotización.`;
-        window.open(
-          `https://wa.me/1${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
-          "_blank",
+      async function useCredit(jobId, contactPhone, jobTitle, providerId) {
+        const confirmed = confirm(
+          `¿Usar 1 crédito para cotizar este trabajo?\n\n"${jobTitle}"`,
         );
+        if (!confirmed) return;
+
+        // Deduct 1 credit
+        const currentCredits = parseInt(
+          document.getElementById("creditsCount").textContent,
+        );
+
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/providers?id=eq.${providerId}`,
+          {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${token}`,
+              Prefer: "return=minimal",
+            },
+            body: JSON.stringify({ credits: currentCredits - 1 }),
+          },
+        );
+
+        if (response.ok) {
+          const newCredits = currentCredits - 1;
+          document.getElementById("creditsCount").textContent = newCredits;
+
+          const message = `Hola, vi tu trabajo en ServiRD: "${jobTitle}". Me gustaría enviarte una cotización.`;
+          window.open(
+            `https://wa.me/1${contactPhone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
+            "_blank",
+          );
+
+          if (newCredits === 0) {
+            const buttons = document.querySelectorAll(".btn-quote");
+            buttons.forEach((btn) => {
+              btn.style.background = "#cccccc";
+              btn.style.color = "#888";
+              btn.style.cursor = "not-allowed";
+              btn.disabled = true;
+              btn.textContent = "Sin créditos";
+            });
+          }
+        } else {
+          alert("Hubo un error. Por favor intenta de nuevo.");
+        }
       }
       function handleLogout() {
         localStorage.removeItem("servird_token");

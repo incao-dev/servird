@@ -340,16 +340,16 @@
         if (data && data.length > 0) {
           const provider = data[0];
 
-          // Show real first name
           document.getElementById("firstName").textContent =
             provider.first_name;
 
-          // Show category and zone badges under welcome message
           const welcome = document.querySelector(".welcome p");
           welcome.innerHTML = `
-        Tu categoría: <strong>${formatCategory(provider.category)}</strong> &nbsp;·&nbsp;
-        Zona: <strong>${formatZone(provider.zone)}</strong>
-      `;
+      Tu categoría: <strong>${formatCategory(provider.category)}</strong> &nbsp;·&nbsp;
+      Zona: <strong>${formatZone(provider.zone)}</strong>
+    `;
+
+          loadJobs(provider.category, provider.zone);
         }
       }
 
@@ -378,7 +378,66 @@
         };
         return map[zone] || zone;
       }
+      async function loadJobs(category, zone) {
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/jobs?category=eq.${category}&zone=eq.${zone}&status=eq.open&select=*&order=created_at.desc`,
+          {
+            headers: {
+              apikey: SUPABASE_KEY,
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
 
+        const jobs = await response.json();
+        const jobsList = document.getElementById("jobsList");
+        const newJobsCount = document.getElementById("newJobsCount");
+        const notifBadge = document.getElementById("notifBadge");
+
+        if (!jobs || jobs.length === 0) {
+          jobsList.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3>No hay trabajos disponibles aún</h3>
+        <p>Cuando un cliente publique un trabajo en tu zona y categoría,<br/>aparecerá aquí automáticamente.</p>
+      </div>
+    `;
+          return;
+        }
+
+        newJobsCount.textContent = jobs.length;
+        notifBadge.textContent = jobs.length + " nuevos";
+        notifBadge.style.display = "inline-block";
+
+        jobsList.innerHTML = jobs
+          .map(
+            (job) => `
+    <div class="job-card new">
+      <div class="job-info">
+        <h3>${job.title}</h3>
+        <p style="font-size:14px; color:#666; margin-bottom:10px; line-height:1.5">${job.description}</p>
+        <div class="job-meta">
+          <span class="job-tag">📍 ${formatZone(job.zone)}</span>
+          <span class="job-tag">🔧 ${formatCategory(job.category)}</span>
+          <span class="job-tag">📞 ${job.contact_phone}</span>
+        </div>
+      </div>
+      <button class="btn-quote" onclick="contactClient('${job.contact_phone}', '${job.title}')">
+        Cotizar
+      </button>
+    </div>
+  `,
+          )
+          .join("");
+      }
+
+      function contactClient(phone, jobTitle) {
+        const message = `Hola, vi tu trabajo en ServiRD: "${jobTitle}". Me gustaría enviarte una cotización.`;
+        window.open(
+          `https://wa.me/1${phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
+          "_blank",
+        );
+      }
       function handleLogout() {
         localStorage.removeItem("servird_token");
         localStorage.removeItem("servird_user");

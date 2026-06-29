@@ -8,6 +8,7 @@ Required variables:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (server-only; used to roll back auth users if provider profile creation fails)
 
 ## Getting Started
 

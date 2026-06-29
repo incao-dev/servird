@@ -1,17 +1,20 @@
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
-function requireEnv(name: string): string {
-  const value = process.env[name]
-  if (!value) {
-    throw new Error(
-      `Missing required environment variable: ${name}. ` +
-        'Create .env.local from .env.example and set your Supabase project credentials.'
-    )
-  }
-  return value
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+if (!supabaseUrl) {
+  throw new Error(
+    'Missing required environment variable: NEXT_PUBLIC_SUPABASE_URL. ' +
+      'Create .env.local from .env.example and set your Supabase project credentials.'
+  )
 }
 
-const supabaseUrl = requireEnv('NEXT_PUBLIC_SUPABASE_URL')
-const supabaseAnonKey = requireEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY')
+if (!supabaseAnonKey) {
+  throw new Error(
+    'Missing required environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY. ' +
+      'Create .env.local from .env.example and set your Supabase project credentials.'
+  )
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey)

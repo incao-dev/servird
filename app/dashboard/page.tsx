@@ -40,8 +40,8 @@ type Job = {
   description: string;
   category: string;
   zone: string;
-  contact_phone: string;
   created_at: string;
+  alreadyQuoted?: boolean;
 };
 
 export default function Dashboard() {
@@ -49,7 +49,11 @@ export default function Dashboard() {
   const [provider, setProvider] = useState<Provider | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
-  const [quotingJob, setQuotingJob] = useState<string | null>(null);
+
+  const [quoteModalJob, setQuoteModalJob] = useState<Job | null>(null);
+  const [quotePrice, setQuotePrice] = useState("");
+  const [quoteMessage, setQuoteMessage] = useState("");
+  const [submittingQuote, setSubmittingQuote] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -81,47 +85,80 @@ export default function Dashboard() {
         .eq("status", "open")
         .order("created_at", { ascending: false });
 
-      setJobs(jobsData || []);
+      const { data: existingQuotes } = await supabase
+        .from("quotes")
+        .select("job_id")
+        .eq("provider_id", providerData.id);
+
+      const quotedJobIds = new Set((existingQuotes || []).map((q) => q.job_id));
+
+      const jobsWithFlag = (jobsData || []).map((job) => ({
+        ...job,
+        alreadyQuoted: quotedJobIds.has(job.id),
+      }));
+
+      setJobs(jobsWithFlag);
       setLoading(false);
     }
 
     load();
   }, [router]);
 
-  async function handleQuote(job: Job) {
-    if (!provider) return;
-    if (provider.credits <= 0) {
+  function openQuoteModal(job: Job) {
+    if (!provider || provider.credits <= 0) {
       alert("No tienes créditos disponibles. Por favor compra más créditos.");
       return;
     }
+    setQuoteModalJob(job);
+    setQuotePrice("");
+    setQuoteMessage("");
+  }
 
-    const confirmed = window.confirm(
-      `¿Usar 1 crédito para cotizar este trabajo?\n\n"${job.title}"`
-    );
-    if (!confirmed) return;
-
-    setQuotingJob(job.id);
-
-    const { error } = await supabase
-      .from("providers")
-      .update({ credits: provider.credits - 1 })
-      .eq("id", provider.id);
-
-    if (error) {
-      alert("Hubo un error. Por favor intenta de nuevo.");
-      setQuotingJob(null);
+  async function handleSubmitQuote() {
+    if (!provider || !quoteModalJob) return;
+    if (!quotePrice || !quoteMessage) {
+      alert("Por favor completa el precio y el mensaje.");
       return;
     }
 
-    setProvider({ ...provider, credits: provider.credits - 1 });
+    setSubmittingQuote(true);
 
-    const message = `Hola, vi tu trabajo en ServiRD: "${job.title}". Me gustaría enviarte una cotización.`;
-    window.open(
-      `https://wa.me/1${job.contact_phone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`,
-      "_blank"
+    const { error: quoteError } = await supabase.from("quotes").insert({
+      job_id: quoteModalJob.id,
+      provider_id: provider.id,
+      price: parseInt(quotePrice),
+      message: quoteMessage,
+      status: "pending",
+    });
+
+    if (quoteError) {
+      alert("Hubo un error al enviar la cotización. Intenta de nuevo.");
+      setSubmittingQuote(false);
+      return;
+    }
+
+    const newCredits = provider.credits - 1;
+
+    await supabase
+      .from("providers")
+      .update({ credits: newCredits })
+      .eq("id", provider.id);
+
+    await supabase.from("credit_transactions").insert({
+      provider_id: provider.id,
+      amount: -1,
+      type: "spend",
+      description: `Cotización enviada: ${quoteModalJob.title}`,
+    });
+
+    setProvider({ ...provider, credits: newCredits });
+    setJobs(
+      jobs.map((j) =>
+        j.id === quoteModalJob.id ? { ...j, alreadyQuoted: true } : j
+      )
     );
-
-    setQuotingJob(null);
+    setQuoteModalJob(null);
+    setSubmittingQuote(false);
   }
 
   async function handleLogout() {
@@ -158,7 +195,6 @@ export default function Dashboard() {
 
       <div className="max-w-4xl mx-auto px-4 py-10">
 
-        {/* Welcome */}
         <div className="mb-8">
           <h1 className="text-2xl font-extrabold text-[#1a1a1a] mb-1">
             👋 Bienvenido, {provider?.first_name}
@@ -169,37 +205,24 @@ export default function Dashboard() {
           </p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-10">
           <div className="bg-white border border-gray-100 rounded-2xl p-5">
             <p className="text-xs text-gray-400 mb-2">Trabajos disponibles</p>
-            <p className="text-3xl font-extrabold text-[#1a1a1a]">
-              {jobs.length}
-            </p>
+            <p className="text-3xl font-extrabold text-[#1a1a1a]">{jobs.length}</p>
           </div>
           <div className="bg-white border border-gray-100 rounded-2xl p-5">
             <p className="text-xs text-gray-400 mb-2">Créditos disponibles</p>
-            <p className="text-3xl font-extrabold text-[#FBBF24]">
-              {provider?.credits}
-            </p>
+            <p className="text-3xl font-extrabold text-[#FBBF24]">{provider?.credits}</p>
           </div>
           <div className="bg-white border border-gray-100 rounded-2xl p-5">
-            <p className="text-xs text-gray-400 mb-2">Trabajos completados</p>
-            <p className="text-3xl font-extrabold text-[#1a1a1a]">0</p>
+            <p className="text-xs text-gray-400 mb-2">Cotizaciones enviadas</p>
+            <p className="text-3xl font-extrabold text-[#1a1a1a]">
+              {jobs.filter((j) => j.alreadyQuoted).length}
+            </p>
           </div>
         </div>
 
-        {/* Jobs */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-[#1a1a1a]">
-            Trabajos disponibles
-          </h2>
-          {jobs.length > 0 && (
-            <span className="bg-[#FBBF24] text-[#1a1a1a] text-xs font-bold px-3 py-1 rounded-full">
-              {jobs.length} nuevos
-            </span>
-          )}
-        </div>
+        <h2 className="text-lg font-bold text-[#1a1a1a] mb-4">Trabajos disponibles</h2>
 
         <div className="flex flex-col gap-3">
           {jobs.length === 0 ? (
@@ -233,19 +256,74 @@ export default function Dashboard() {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleQuote(job)}
-                  disabled={provider?.credits === 0 || quotingJob === job.id}
-                  className="bg-[#1a1a1a] text-[#FBBF24] font-bold px-5 py-3 rounded-xl text-sm hover:bg-gray-800 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
-                >
-                  {quotingJob === job.id ? "..." : provider?.credits === 0 ? "Sin créditos" : "Cotizar (1 crédito)"}
-                </button>
+                {job.alreadyQuoted ? (
+                  <span className="text-green-600 font-bold text-sm whitespace-nowrap flex-shrink-0">
+                    ✅ Cotizado
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => openQuoteModal(job)}
+                    disabled={provider?.credits === 0}
+                    className="bg-[#1a1a1a] text-[#FBBF24] font-bold px-5 py-3 rounded-xl text-sm hover:bg-gray-800 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
+                  >
+                    {provider?.credits === 0 ? "Sin créditos" : "Cotizar (1 crédito)"}
+                  </button>
+                )}
               </div>
             ))
           )}
         </div>
 
       </div>
+
+      {quoteModalJob && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center px-4 z-50">
+          <div className="bg-white rounded-2xl p-7 max-w-md w-full">
+            <h3 className="text-lg font-extrabold text-[#1a1a1a] mb-1">
+              Enviar cotización
+            </h3>
+            <p className="text-sm text-gray-500 mb-5">{quoteModalJob.title}</p>
+
+            <label className="block text-sm font-semibold text-[#1a1a1a] mb-2">
+              Precio (RD$) <span className="text-[#FBBF24]">*</span>
+            </label>
+            <input
+              type="number"
+              placeholder="1500"
+              value={quotePrice}
+              onChange={(e) => setQuotePrice(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#FBBF24] mb-4"
+            />
+
+            <label className="block text-sm font-semibold text-[#1a1a1a] mb-2">
+              Mensaje <span className="text-[#FBBF24]">*</span>
+            </label>
+            <textarea
+              placeholder="Puedo hacer este trabajo mañana en la mañana..."
+              rows={3}
+              value={quoteMessage}
+              onChange={(e) => setQuoteMessage(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-[#FBBF24] mb-6 resize-none"
+            />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setQuoteModalJob(null)}
+                className="flex-1 border border-gray-200 text-gray-600 font-bold py-3 rounded-xl text-sm hover:bg-gray-50 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmitQuote}
+                disabled={submittingQuote}
+                className="flex-1 bg-[#1a1a1a] text-[#FBBF24] font-bold py-3 rounded-xl text-sm hover:bg-gray-800 transition-colors disabled:bg-gray-300"
+              >
+                {submittingQuote ? "Enviando..." : "Enviar (1 crédito)"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
